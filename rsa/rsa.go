@@ -39,25 +39,28 @@ type RSASecret struct {
 //NewRSACrypt init with the RSA secret info
 func NewRSACrypt(secretInfo RSASecret) (*RsaCrypt, error) {
 	handle := &RsaCrypt{secretInfo: secretInfo}
-	pubKeyDecoded, err := gocrypt.DecodeString(secretInfo.PublicKey, secretInfo.PublicKeyDataType)
-	if err != nil {
-		return nil, err
+	if secretInfo.PublicKey != "" {
+		pubKeyDecoded, err := gocrypt.DecodeString(secretInfo.PublicKey, secretInfo.PublicKeyDataType)
+		if err != nil {
+			return nil, err
+		}
+		pubKey, err := x509.ParsePKIXPublicKey(pubKeyDecoded)
+		if err != nil {
+			return nil, err
+		}
+		handle.pubKey = pubKey.(*rsa.PublicKey)
 	}
-	pubKey, err := x509.ParsePKIXPublicKey(pubKeyDecoded)
-	if err != nil {
-		return nil, err
+	if secretInfo.PrivateKey != "" {
+		privateKeyDecoded, err := gocrypt.DecodeString(secretInfo.PrivateKey, secretInfo.PrivateKeyDataType)
+		if err != nil {
+			return nil, err
+		}
+		prvKey, err := gocrypt.ParsePrivateKey(privateKeyDecoded, secretInfo.PrivateKeyType)
+		if err != nil {
+			return nil, err
+		}
+		handle.prvKey = prvKey
 	}
-	handle.pubKey = pubKey.(*rsa.PublicKey)
-
-	privateKeyDecoded, err := gocrypt.DecodeString(secretInfo.PrivateKey, secretInfo.PrivateKeyDataType)
-	if err != nil {
-		return nil, err
-	}
-	prvKey, err := gocrypt.ParsePrivateKey(privateKeyDecoded, secretInfo.PrivateKeyType)
-	if err != nil {
-		return nil, err
-	}
-	handle.prvKey = prvKey
 	return handle, nil
 }
 
