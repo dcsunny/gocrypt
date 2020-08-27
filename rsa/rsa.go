@@ -19,6 +19,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"fmt"
 
 	"github.com/dcsunny/gocrypt"
 )
@@ -35,6 +36,8 @@ type RSASecret struct {
 	PrivateKey         string
 	PrivateKeyDataType gocrypt.Encode
 	PrivateKeyType     gocrypt.Secret
+	MaxEncryptBlock    int
+	MaxDecryptBlock    int
 }
 
 //NewRSACrypt init with the RSA secret info
@@ -96,22 +99,27 @@ func (rc *RsaCrypt) Decrypt(src string, srcType gocrypt.Encode) (dst string, err
 //分段加密
 func (rc *RsaCrypt) EncryptBlock(src string, outputDataType gocrypt.Encode) (dst string, err error) {
 	srcBytes := []byte(src)
-	keySize, srcSize := rc.pubKey.Size(), len(srcBytes)
-	//单次加密的长度需要减掉padding的长度，PKCS1为11
-	offSet, once := 0, keySize-11
+	srcSize := len(srcBytes)
+	offSet := 0
 	buffer := bytes.Buffer{}
-	for offSet < srcSize {
-		endIndex := offSet + once
-		if endIndex > srcSize {
-			endIndex = srcSize
-		}
-		// 加密一部分
-		bytesOnce, err := rsa.EncryptPKCS1v15(rand.Reader, rc.pubKey, srcBytes[offSet:endIndex])
-		if err != nil {
-			return "", err
+	i := 0
+	var bytesOnce []byte
+	for srcSize-offSet > 0 {
+		if srcSize-offSet > rc.secretInfo.MaxEncryptBlock {
+			// 加密一部分
+			bytesOnce, err = rsa.EncryptPKCS1v15(rand.Reader, rc.pubKey, srcBytes[offSet:offSet+rc.secretInfo.MaxEncryptBlock])
+			if err != nil {
+				return "", err
+			}
+		} else {
+			bytesOnce, err = rsa.EncryptPKCS1v15(rand.Reader, rc.pubKey, srcBytes[offSet:srcSize])
+			if err != nil {
+				return "", err
+			}
 		}
 		buffer.Write(bytesOnce)
-		offSet = endIndex
+		i++
+		offSet = i * rc.secretInfo.MaxEncryptBlock
 	}
 	var dataEncrypted []byte
 	dataEncrypted = buffer.Bytes()
@@ -124,21 +132,28 @@ func (rc *RsaCrypt) DecryptBlock(src string, srcType gocrypt.Encode) (bytesDecry
 	if err != nil {
 		return
 	}
-	keySize := rc.prvKey.Size()
-	srcSize := len(decodeData)
 	var offSet = 0
+	srcSize := len(decodeData)
+	i := 0
 	var buffer = bytes.Buffer{}
-	for offSet < srcSize {
-		endIndex := offSet + keySize
-		if endIndex > srcSize {
-			endIndex = srcSize
-		}
-		bytesOnce, err := rsa.DecryptPKCS1v15(rand.Reader, rc.prvKey, decodeData[offSet:endIndex])
-		if err != nil {
-			return "", err
+	var bytesOnce []byte
+	for srcSize-offSet > 0 {
+		fmt.Println(srcSize)
+		fmt.Println(offSet)
+		if srcSize-offSet > rc.secretInfo.MaxDecryptBlock {
+			bytesOnce, err = rsa.DecryptPKCS1v15(rand.Reader, rc.prvKey, decodeData[offSet:offSet+rc.secretInfo.MaxDecryptBlock])
+			if err != nil {
+				return "", err
+			}
+		} else {
+			bytesOnce, err = rsa.DecryptPKCS1v15(rand.Reader, rc.prvKey, decodeData[offSet:srcSize])
+			if err != nil {
+				return "", err
+			}
 		}
 		buffer.Write(bytesOnce)
-		offSet = endIndex
+		i++
+		offSet = i * rc.secretInfo.MaxDecryptBlock
 	}
 	bytesDecrypt = string(buffer.Bytes())
 	return
