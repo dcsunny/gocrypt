@@ -15,6 +15,7 @@
 package rsa
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -90,6 +91,57 @@ func (rc *RsaCrypt) Decrypt(src string, srcType gocrypt.Encode) (dst string, err
 		return
 	}
 	return string(dataDecrypted), nil
+}
+
+//分段加密
+func (rc *RsaCrypt) EncryptBlock(src string, outputDataType gocrypt.Encode) (dst string, err error) {
+	srcBytes := []byte(src)
+	keySize, srcSize := rc.pubKey.Size(), len(srcBytes)
+	//单次加密的长度需要减掉padding的长度，PKCS1为11
+	offSet, once := 0, keySize-11
+	buffer := bytes.Buffer{}
+	for offSet < srcSize {
+		endIndex := offSet + once
+		if endIndex > srcSize {
+			endIndex = srcSize
+		}
+		// 加密一部分
+		bytesOnce, err := rsa.EncryptPKCS1v15(rand.Reader, rc.pubKey, srcBytes[offSet:endIndex])
+		if err != nil {
+			return "", err
+		}
+		buffer.Write(bytesOnce)
+		offSet = endIndex
+	}
+	var dataEncrypted []byte
+	dataEncrypted = buffer.Bytes()
+	return gocrypt.EncodeToString(dataEncrypted, outputDataType)
+}
+
+//分段解密
+func (rc *RsaCrypt) DecryptBlock(src string, srcType gocrypt.Encode) (bytesDecrypt string, err error) {
+	decodeData, err := gocrypt.DecodeString(src, srcType)
+	if err != nil {
+		return
+	}
+	keySize := rc.prvKey.Size()
+	srcSize := len(decodeData)
+	var offSet = 0
+	var buffer = bytes.Buffer{}
+	for offSet < srcSize {
+		endIndex := offSet + keySize
+		if endIndex > srcSize {
+			endIndex = srcSize
+		}
+		bytesOnce, err := rsa.DecryptPKCS1v15(rand.Reader, rc.prvKey, decodeData[offSet:endIndex])
+		if err != nil {
+			return "", err
+		}
+		buffer.Write(bytesOnce)
+		offSet = endIndex
+	}
+	bytesDecrypt = string(buffer.Bytes())
+	return
 }
 
 //Sign calculates the signature of input data with the hash type & private key
