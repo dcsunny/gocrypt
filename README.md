@@ -8,7 +8,7 @@ AES/DES块加密时，填充默认采用PKCS7 padding(如果块大小为64 位�
 ## get & import
 
 ```txt
-go get github.com/yuchenfw/gocrypt
+go get github.com/dcsunny/gocrypt
 ```
 
 ## 使用方法

@@ -18,7 +18,7 @@ import (
 	"crypto/aes"
 	"fmt"
 
-	"github.com/yuchenfw/gocrypt"
+	"github.com/dcsunny/gocrypt"
 )
 
 type aesCrypt struct {

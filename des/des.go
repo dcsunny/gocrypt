@@ -18,7 +18,7 @@ import (
 	"crypto/des"
 	"fmt"
 
-	"github.com/yuchenfw/gocrypt"
+	"github.com/dcsunny/gocrypt"
 )
 
 type desCrypt struct {

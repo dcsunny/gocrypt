@@ -17,7 +17,7 @@ package hash
 import (
 	"crypto/hmac"
 
-	"github.com/yuchenfw/gocrypt"
+	"github.com/dcsunny/gocrypt"
 )
 
 type hash struct {
