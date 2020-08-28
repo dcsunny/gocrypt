@@ -19,7 +19,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"fmt"
 
 	"github.com/dcsunny/gocrypt"
 )
@@ -138,8 +137,6 @@ func (rc *RsaCrypt) DecryptBlock(src string, srcType gocrypt.Encode) (bytesDecry
 	var buffer = bytes.Buffer{}
 	var bytesOnce []byte
 	for srcSize-offSet > 0 {
-		fmt.Println(srcSize)
-		fmt.Println(offSet)
 		if srcSize-offSet > rc.secretInfo.MaxDecryptBlock {
 			bytesOnce, err = rsa.DecryptPKCS1v15(rand.Reader, rc.prvKey, decodeData[offSet:offSet+rc.secretInfo.MaxDecryptBlock])
 			if err != nil {
